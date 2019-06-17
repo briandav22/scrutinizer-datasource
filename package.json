@@ -39,7 +39,10 @@
     "q": "^1.5.0"
   },
   "dependencies": {
+<<<<<<< HEAD
     "axios": "^0.18.1",
+=======
+>>>>>>> c768398691fce89e40c75df21028dfae03b8febb
     "babel-plugin-transform-es2015-for-of": "^6.6.0",
     "babel-plugin-transform-es2015-modules-systemjs": "^6.24.1",
     "babel-preset-es2015": "^6.24.1",

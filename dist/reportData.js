@@ -3,7 +3,7 @@
 System.register(["lodash"], function (_export, _context) {
   "use strict";
 
-  var _, _createClass, scrutinizerExporters, ScrutinizerJSON, Handledata;
+  var _, _createClass, ScrutinizerJSON, Handledata;
 
   function _defineProperty(obj, key, value) {
     if (key in obj) {
@@ -49,58 +49,21 @@ System.register(["lodash"], function (_export, _context) {
         };
       }();
 
-      _export("scrutinizerExporters", scrutinizerExporters = function scrutinizerExporters() {
-        _classCallCheck(this, scrutinizerExporters);
-
-        this.params = {
-          rm: "get_known_objects",
-          type: "devices"
-        };
-
-        this.formatParams = function (params) {
-          return "?" + Object.keys(params).map(function (key) {
-            return key + "=" + encodeURIComponent(params[key]);
-          }).join("&");
-        };
-
-        this.moveData = function (arr, old_index, new_index) {
-          while (old_index < 0) {
-            old_index += arr.length;
-          }
-          while (new_index < 0) {
-            new_index += arr.length;
-          }
-          if (new_index >= arr.length) {
-            var k = new_index - arr.length;
-
-            while (k-- + 1) {
-              arr.push(undefined);
-            }
-          }
-          arr.splice(new_index, 0, arr.splice(old_index, 1)[0]);
-          return arr;
-        };
-      });
-
-      _export("scrutinizerExporters", scrutinizerExporters);
-
       _export("ScrutinizerJSON", ScrutinizerJSON = function () {
         function ScrutinizerJSON() {
           _classCallCheck(this, ScrutinizerJSON);
         }
 
         _createClass(ScrutinizerJSON, [{
-          key: "reportJSON",
-          value: function reportJSON(authToken, reportType, startTime, endTime, ipAddress, reportDirection, expinterface, reportfilter) {
-
+          key: "createParams",
+          value: function createParams(authToken, reportType, startTime, endTime, ipAddress, reportDirection, expInterface, reportFilter) {
             var exporterInterface = void 0;
             var scrutFilters = void 0;
 
-            // if user wants all interface or specific interface
-            if (expinterface === "allInterfaces") {
+            if (expInterface === "allInterfaces") {
               exporterInterface = "_ALL";
             } else {
-              exporterInterface = "-" + expinterface;
+              exporterInterface = "-" + expInterface;
             }
 
             //  if user wants all devices, then they are defualted to all interfaces
@@ -121,39 +84,53 @@ System.register(["lodash"], function (_export, _context) {
               }
             }
             //if user is adding filters to the report.
-            if (reportfilter !== "No Filter") {
-              var filterJson = JSON.parse(reportfilter);
+            if (reportFilter !== "No Filter") {
+              var filterJson = JSON.parse(reportFilter);
               for (var key in filterJson) {
                 if (filterJson.hasOwnProperty(key)) {
-                  //if use copies filter from Scrutinizer example, we want to ignore device filters, as they are set above.
                   if (key != "sdfDips_0") {
                     scrutFilters[key] = filterJson[key];
                   }
                 }
               }
             }
+
+            return {
+              authToken: authToken,
+              reportType: reportType,
+              startTime: startTime,
+              endTime: endTime,
+              ipAddress: ipAddress,
+              reportDirection: reportDirection,
+              expInterface: exporterInterface,
+              scrutFilters: scrutFilters
+            };
+          }
+        }, {
+          key: "reportJSON",
+          value: function reportJSON(scrutParams) {
             //returning report params to be passed into request
-            var params = {
+            return {
               rm: "report_api",
               action: "get",
-              authToken: authToken,
+              authToken: scrutParams.authToken,
               rpt_json: JSON.stringify({
-                reportTypeLang: reportType,
+                reportTypeLang: scrutParams.reportType,
                 reportDirections: {
-                  selected: reportDirection
+                  selected: scrutParams.reportDirection
                 },
                 times: {
                   dateRange: "Custom",
-                  start: "" + startTime,
-                  end: "" + endTime
+                  start: "" + scrutParams.startTime,
+                  end: "" + scrutParams.endTime
                 },
-                filters: scrutFilters,
+                filters: scrutParams.scrutFilters,
                 dataGranularity: {
                   selected: "auto"
                 }
               }),
 
-              data_requested: _defineProperty({}, reportDirection, {
+              data_requested: _defineProperty({}, scrutParams.reportDirection, {
                 graph: "all",
                 table: {
                   query_limit: {
@@ -163,95 +140,71 @@ System.register(["lodash"], function (_export, _context) {
                 }
               })
             };
-
-            return params;
           }
         }, {
-          key: "interfaceJson",
-          value: function interfaceJson(authToken, ipAddress) {
-            var params = {
-              rm: "status",
-              action: "get",
-              view: "topInterfaces",
-              authToken: authToken,
-              session_state: JSON.stringify({
-                client_time_zone: "America/New_York",
-                order_by: [],
-                search: [{
-                  column: "exporter_search",
-                  value: "" + ipAddress,
-                  comparison: "like",
-                  data: { filterType: "multi_string" },
-                  _key: "exporter_search_like_" + ipAddress
-                }],
-                query_limit: { offset: 0, max_num_rows: 50 },
-                hostDisplayType: "dns"
-              })
+          key: "interfaceJSON",
+          value: function interfaceJSON(url, authToken, ipAddress) {
+            //params to figure out which interfaces exist for a device
+            return {
+              url: url,
+              method: "get",
+              params: {
+                rm: "status",
+                action: "get",
+                view: "topInterfaces",
+                authToken: authToken,
+                session_state: {
+                  client_time_zone: "America/New_York",
+                  order_by: [],
+                  search: [{
+                    column: "exporter_search",
+                    value: "" + ipAddress,
+                    comparison: "like",
+                    data: { filterType: "multi_string" },
+                    _key: "exporter_search_like_" + ipAddress
+                  }],
+                  query_limit: { offset: 0, max_num_rows: 50 },
+                  hostDisplayType: "dns"
+                }
+              }
             };
-
-            return params;
           }
         }, {
           key: "findtimeJSON",
-          value: function findtimeJSON(authToken, reportType, startTime, endTime, ipAddress, reportDirection, expinterface, reportfilter) {
-            var exporterInterface = void 0;
-            var scrutFilters = void 0;
-
-            if (expinterface === "allInterfaces") {
-              exporterInterface = "_ALL";
-            } else {
-              exporterInterface = "-" + expinterface;
-            }
-
-            //  if user wants all devices, then they are defualted to all interfaces
-            if (ipAddress === "allExporters") {
-              scrutFilters = {
-                sdfDips_0: "in_GROUP_ALL"
-              };
-            } else {
-              // if user wants a specific device, they can either have ALL interfaces, or a specific interface
-              if (exporterInterface === "_ALL") {
-                scrutFilters = {
-                  sdfDips_0: "in_" + ipAddress + "_ALL"
-                };
-              } else {
-                scrutFilters = {
-                  sdfDips_0: "in_" + ipAddress + "_" + ipAddress + exporterInterface
-                };
-              }
-            }
-            //if user is adding filters to the report.
-            if (reportfilter !== "No Filter") {
-              var filterJson = JSON.parse(reportfilter);
-              for (var key in filterJson) {
-                if (filterJson.hasOwnProperty(key)) {
-                  if (key != "sdfDips_0") {
-                    scrutFilters[key] = filterJson[key];
-                  }
-                }
-              }
-            }
-
-            var params = {
+          value: function findtimeJSON(scrutParams) {
+            //params to figure out which interval your in based on data you are requesting
+            return {
               rm: "report_start",
-              authToken: authToken,
+              authToken: scrutParams.authToken,
               report_data: {
                 parse: true,
-                reportDirections: { selected: "" + reportDirection },
-                reportTypeLang: "" + reportType,
+                reportDirections: { selected: "" + scrutParams.reportDirection },
+                reportTypeLang: "" + scrutParams.reportType,
                 times: {
                   dateRange: "Custom",
-                  start: "" + startTime,
-                  end: "" + endTime,
+                  start: "" + scrutParams.startTime,
+                  end: "" + scrutParams.endTime,
                   clientTimezone: "America/New_York"
                 },
-                filters: scrutFilters,
+                filters: scrutParams.scrutFilters,
                 dataGranularity: { selected: "auto" },
                 oneCollectorRequest: false
               }
             };
-
-            return params;
+          }
+        }, {
+          key: "exporterJSON",
+          value: function exporterJSON(url, authToken) {
+            //params to figure out which exporters are available to pick from.
+            return {
+              url: url,
+              method: "GET",
+              params: {
+                rm: "get_known_objects",
+                type: "devices",
+                authToken: authToken
+              }
+            };
           }
         }]);
 
@@ -261,10 +214,10 @@ System.register(["lodash"], function (_export, _context) {
       _export("ScrutinizerJSON", ScrutinizerJSON);
 
       _export("Handledata", Handledata = function () {
+        //scrutinizer returns graph data opposite of how grafana wants it. So we flip it here.
         function Handledata() {
           _classCallCheck(this, Handledata);
 
-          //scrutinizer returns graph data opposite of how grafana wants it. So we flip it here.
           this.rearrangeData = function (arr, oldIndex, newIndex) {
             while (oldIndex < 0) {
               old_index += arr.length;
@@ -284,14 +237,11 @@ System.register(["lodash"], function (_export, _context) {
           };
         }
 
-        //grafana wants time in millaseconds. so we multiple by 1000.
-        //we also want to return data in bits, so we device by 8
-
-
         _createClass(Handledata, [{
           key: "formatData",
           value: function formatData(scrutData, reportDirection, intervalTime) {
-
+            //grafana wants time in millaseconds. so we multiple by 1000.
+            //we also want to return data in bits, so we device by 8
             var datatoGraph = [];
             var graphingData = scrutData;
             var i = void 0,
